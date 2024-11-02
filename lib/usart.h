@@ -39,12 +39,12 @@ class USART {
         uint8_t getMode();
         uint8_t getParity();
         uint32_t getBaud();
-        //uint16_t sendString(const std::string data);
-        uint16_t sendCharArr(const char *data);
-        bool sendByte(const uint8_t data);
-        //uint16_t receiveString(std::string &data);
-        uint16_t receiveCharArr(char *data, const uint16_t max);
-        bool receiveByte(uint8_t *data);
+        void send(const uint8_t data);
+        void send(const uint8_t *data, const uint16_t len);
+        uint16_t send(const char *data);
+        void receive(uint8_t *data);
+        void receive(uint8_t *data, const uint16_t len);
+        uint16_t receive(char *data, const uint16_t max);
 
 };
 #endif

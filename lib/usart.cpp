@@ -92,29 +92,44 @@ uint32_t USART::getBaud(){
     return F_CPU/(16 * (ubrrn + 1));;
 }
 
-uint16_t USART::sendCharArr(const char *data){
-    int i;
+void USART::send(const uint8_t data){
+    while ((UCSR0A & _BV(UDRE0)) == 0);
+    UDR0 = data;
+}
+
+void USART::send(const uint8_t *data, const uint16_t len){
+    uint16_t i = 0;
+    for (i = 0; i < len; i++){
+        send(data[i]);
+    }
+}
+
+uint16_t USART::send(const char *data){
+    uint16_t i;
     for (i = 0; data[i] != '\0'; i++){
-        while( !(UCSR0A & _BV(UDRE0)) ) ;
-        UDR0 = data[i];
+        send(data[i]);
     }
     return i;
 }
 
-bool USART::sendByte(const uint8_t data){
-    UDR0 = data;
-    return 1;
+void USART::receive(uint8_t *data){
+    while( !(UCSR0A & _BV(RXC0)) ) ;
+    *data = UDR0;
 }
 
-uint16_t USART::receiveCharArr(char *data, const uint16_t max){
-    char rxByte = 0;
+void USART::receive(uint8_t *data, const uint16_t max){
     uint16_t size = 0;
     do{
-        while( !(UCSR0A & _BV(RXC0)) ) ;
-        rxByte = UDR0;
-        data[size] = rxByte;
+        receive(&data[size]);
         size++;
-    }while (rxByte != '\n' && rxByte != '\r' && size < max);
+    } while(size < max);
+}
 
+uint16_t USART::receive(char *data, const uint16_t max){
+    uint16_t size = 0;
+    do{
+        receive((uint8_t *) &data[size]);
+        size++;
+    } while (data[size - 1] != '\n' && data[size - 1] != '\r' && size < max);
     return size;
 }
