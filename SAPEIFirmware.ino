@@ -124,14 +124,23 @@ void loop(){
   }
 }
 
+/**
+ * @brief Funcion tipo "wrapper" para parpadear una salida
+ */
 void blink(uint8_t channel, uint8_t *port, uint8_t pin, uint16_t period, uint8_t repetitions){
     pinControl(channel, port, pin, 1, repetitions, period);
 }
 
+/**
+ * @brief Funcion tipo "wrapper" para parpadear por un periodo determinado una salida
+ */
 void flash(uint8_t channel, uint8_t *port, uint8_t pin, uint16_t period, uint16_t onTime, uint8_t repetitions){
     pinControl(channel, port, pin, 2, repetitions, period, onTime);
 }
 
+/**
+ * @brief Funcion que administra el estado de las salidas en base a su configuracion (blink o flash)
+ */
 void pinControlHandler(uint8_t channel){ // ISR ONLY!!!
   if(pins[channel].alreadyControlling == 1){
     switch (pins[channel].conType){
@@ -169,6 +178,9 @@ void pinControlHandler(uint8_t channel){ // ISR ONLY!!!
   }
 }
 
+/**
+ * @brief Funcion que define los parametros para el control de las salidas
+ */
 void pinControl(uint8_t channel, uint8_t *port, uint8_t pin, uint8_t type, uint8_t repetitions, uint16_t period, uint16_t onTime){
   if(pins[channel].alreadyControlling == 0){
     pins[channel].conPort = port;
@@ -184,6 +196,9 @@ void pinControl(uint8_t channel, uint8_t *port, uint8_t pin, uint8_t type, uint8
   }
 }
 
+/**
+ * @brief Funcion para manipular todos los pines definidos al "mismo tiempo"
+ */
 void pinsControlHandler(){
   for (uint8_t i = 0; i < SIMULTANEOUS_CONTROL_NUMBER; i++)
     pinControlHandler(i);
