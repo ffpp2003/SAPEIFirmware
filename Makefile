@@ -2,6 +2,7 @@
 BOARD_TYPE = arduino:avr:nano
 PORT = /dev/ttyUSB0
 BUILD_DIR = build
+BAUD = 115200
 
 # Archivo fuente principal
 SRC_FILE = $(wildcard *.ino)
@@ -13,6 +14,9 @@ build:
 # Target para cargar el programa en el Arduino Nano
 upload: build
 	arduino-cli upload --fqbn $(BOARD_TYPE) -p $(PORT) -i $(BUILD_DIR)/$(SRC_FILE).hex
+
+monitor:
+	arduino-cli monitor -p $(PORT) --config $(BAUD)
 
 # Target para limpiar los archivos de compilación
 clean:
