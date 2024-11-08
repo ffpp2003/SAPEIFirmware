@@ -4,20 +4,33 @@
 #include "src/rfid/MFRC522DriverPinSimple.h"
 #include "src/rfid/MFRC522Debug.h"
 #include "src/lib/gpio.h"
-//#include "src/lib/usart.h"
+#include "src/SAPEICore/Error.h"
+
+#define RED_LED PORTdBits.b5
+#define YEL_LED PORTdBits.b6
+#define GRN_LED PORTdBits.b7
+#define BUZZER PORTbBits.b0
+
+#define LEDS_PORT PORTD
+#define BUZZER_PORT PORTB
+
+#define RED 5
+#define YEL 6
+#define GRN 7
+#define BZZ 0
 
 MFRC522DriverPinSimple ss_1_pin(10);
 MFRC522DriverSPI driver_1{ss_1_pin};
 MFRC522 reader{driver_1};
 
-//USART serial;
-
 void blink(uint8_t *port, uint8_t pin, uint16_t period);
-void flash(uint8_t *port, uint8_t pin, uint16_t OnPeriod, uint16_t OffPeriod);
+void flash(uint8_t *port, uint8_t pin, uint16_t onTime, uint16_t period);
+void manageFeedback(uint16_t code = 0xffff);
 
 void setup(){
   Serial.begin(115200);
   DDRd = 0xE0;
+  DDRb |= _BV(PORTB0);
 
   Serial.print("INIT ");
 
@@ -29,7 +42,7 @@ void setup(){
   }
 
   bool init = 0;
-  char rxbuff[50];
+  char rxbuff[50] = {0};
   while (init == 0){
     if (Serial.available()){
       Serial.readBytesUntil('\n', rxbuff, 50);
@@ -38,38 +51,103 @@ void setup(){
       else
         memset(rxbuff, 0, 50);
     }
-    flash(&PORTD, 5, 50, 950);
+    flash(&PORTD, 5, 50, 1000);
   }
   Serial.println("CONNECTED");
 }
 
 void loop(){
-  if (reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial()) {
+  static uint32_t readerTimestamp = millis();
+
+  if (reader.PICC_IsNewCardPresent() && reader.PICC_ReadCardSerial() && millis() >= readerTimestamp + 5000) {
     MFRC522Debug::PrintUID(Serial, reader.uid);
     Serial.println();
-    // Halt PICC.
     reader.PICC_HaltA();
-    // Stop encryption on PCD.
     reader.PCD_StopCrypto1();
-    delay(1000);
+    readerTimestamp = millis();
   }
+
+  if(Serial.available()){
+    char rxbuff[5] = {0};
+    Serial.readBytesUntil('\n', rxbuff, 5);
+    manageFeedback(atoi(rxbuff));
+  }
+  manageFeedback();
 }
 
 void blink(uint8_t *port, uint8_t pin, uint16_t period){
-    static uint32_t timestamp = millis();
+    static uint32_t timestamp;
     if (millis() >= timestamp + period){
-        *port ^= _BV(pin);
+        *port &= ~_BV(pin);
         timestamp = millis();
     }
+    if (millis() >= timestamp + period/2)
+        *port |= _BV(pin);
 }
 
-void flash(uint8_t *port, uint8_t pin, uint16_t OnPeriod, uint16_t OffPeriod){
-    static uint32_t timestamp = millis();
-    if (millis() >= timestamp + OnPeriod){
+void flash(uint8_t *port, uint8_t pin, uint16_t onTime, uint16_t period){
+    static uint32_t timestamp;
+    if (millis() >= timestamp + period)
+        timestamp = millis();
+    if (millis() >= timestamp + onTime){
         *port &= ~_BV(pin);
     } else {
         *port |= _BV(pin);
     }
-    if (millis() >= timestamp + OnPeriod + OffPeriod)
+}
+
+void manageFeedback(uint16_t code){
+    static uint32_t timestamp;
+    static uint8_t mode = 0, led = 0;
+
+    if (code == 0xffff){
+        switch (mode){
+            case 0:
+                RED_LED = YEL_LED = GRN_LED = BUZZER = 0;
+                break;
+            case 1:
+                blink(&LEDS_PORT, led, 500);
+                flash(&BUZZER_PORT, BZZ, 50, 5500);
+                break;
+            case 2:
+                flash(&BUZZER_PORT, BZZ, 850, 5500);
+                break;
+            default:
+                break;
+        }
+        if (millis() >= timestamp + 5000){
+            timestamp = millis();
+            mode = 0;
+        }
+    } else {
+        switch (code){
+            case OK:
+                mode = 1;
+                GRN_LED = 1;
+                //BUZZER = 1;
+                led = GRN;
+                break;
+            case TR_NOT_ENOUGH_FUNDS:
+                mode = 1;
+                RED_LED = 1;
+                //BUZZER = 1;
+                led = RED;
+                break;
+            case TR_JUST_ENOUGH_FUNDS:
+                mode = 1;
+                YEL_LED = 1;
+                //BUZZER = 1;
+                led = YEL;
+                break;
+            case TR_CLIENT_NOT_FOUND:
+                mode = 2;
+                RED_LED = 1;
+                //BUZZER = 1;
+                led = RED;
+                break;
+            default:
+                break;
+        }
         timestamp = millis();
+    }
 }
