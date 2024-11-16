@@ -118,6 +118,9 @@ void loop(){
             flash(0, LEDS_PORT, RED, 100, 50, 25);
             flash(1, BUZZER_PORT, BZZ, 100, 50, 15);
             break;
+        case TR_ERROR:
+            flash(0, LEDS_PORT, RED, 6000, 6000);
+            flash(1, BUZZER_PORT, BZZ, 2000, 1000, 3);
         default:
             break;
     }
