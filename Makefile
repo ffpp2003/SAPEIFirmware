@@ -11,7 +11,7 @@ SRC_FILE = $(wildcard *.ino)
 FILES_TO_RENAME = $(filter-out src/SAPEICore/Error.h, $(wildcard src/SAPEICore/*))
 
 # Target por defecto
-all: rename_files build restore_files
+all: build
 
 # Renombrar archivos (agregar ".off")
 rename_files:
@@ -25,14 +25,15 @@ restore_files:
 		mv $$file.off $$file; \
 	done
 
-# Compilar el programa
-build:
+compile:
 	arduino-cli compile --fqbn $(BOARD_TYPE) --output-dir $(BUILD_DIR) $(SRC_FILE)
+
+# Compilar el programa
+build: clean rename_files compile restore_files
 
 # Cargar el programa en el Arduino Nano
 upload: build
 	arduino-cli upload --fqbn $(BOARD_TYPE) -p $(PORT) -i $(BUILD_DIR)/$(SRC_FILE).hex
-
 
 monitor:
 	arduino-cli monitor -p $(PORT) --config $(BAUD)
